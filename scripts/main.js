@@ -1,23 +1,49 @@
-import locationsArray from '../init-locations.js';
+import locationsArray from './location.js';
 
-let colorElement1 = document.getElementById("bgrone");
-let colorElement2 = document.getElementById("bgrtwo");
-
-
+let colorElement1 = document.getElementById("status1");
+let colorElement2 = document.getElementById("status2");
+let device, location;
 function main() {
     console.log('Page is fully loaded');
 }
 
 window.addEventListener('load', main);
-colorElement1.addEventListener('click', colorFunction1);
-colorElement1.addEventListener('touch', colorFunction1);
-colorElement2.addEventListener('click', locationHandler);
-colorElement2.addEventListener('touch', locationHandler);
+colorElement1.addEventListener('click', onClickSquareBox1);
+colorElement1.addEventListener('touch', onClickSquareBox1);
+colorElement2.addEventListener('click', onClickSquareBox2);
+colorElement2.addEventListener('touch', onClickSquareBox2);
 
-let currentlat;
-let currentlon;
-let error = true;
+async function onClickSquareBox1() {
+    location = locationsArray[0];
+    let confirmation = "Treasure ready: " + location.name;
+    document.getElementById("status1").innerHTML = confirmation;
+    let utterance = new SpeechSynthesisUtterance(confirmation);
+    speechSynthesis.speak(utterance);
+}
 
+async function onClickSquareBox2() {
+    device = await getLocation();
+
+    let isInside = isInsideSqaure(device, location);
+    let status;
+    let speak;
+    status = "Device Coordinates: " + "<br>";
+    status += "Latitude: " + device.coords.latitude + "<br>";
+    status += "Longitude: " + device.coords.longitude + "<br>";
+    if(isInside) {
+        status += "Congratulations!! You have reached Quest: " + location.name;
+        speak = "Congratulations!! You have reached Quest: " + location.name;
+    } else {
+        status += "You haven't reached the quest";
+        speak = "You haven't reached the quest";
+    }
+    document.getElementById("status2").innerHTML = status;
+    let utterance = new SpeechSynthesisUtterance(speak);
+    speechSynthesis.speak(utterance);
+
+}
+
+// collects current location
 async function getLocation() {
     return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -26,77 +52,81 @@ async function getLocation() {
     });
 }
 
-async function locationHandler() {
-    let locText = await getLocation();
-    currentlat = locText.coords.latitude;
-    document.getElementById("device-lat").innerHTML = "Your device-lat: " + currentlat.toFixed(6);
-    currentlon = locText.coords.longitude;
-    document.getElementById("device-long").innerHTML = "Your device-long: " + currentlon.toFixed(6);
-    var target = locationsArray[2].Name
-   // locationsArray.forEach(function (value) {
+function isValid(coordinates) {
+    let lat = coordinates.latitude;
+    let lon = coordinates.longitude;
 
-        if (isInside(locationsArray[2].Latitude, locationsArray[2].Longitude)) {
-            document.getElementById("locationAnswer").innerHTML = value.Name;
-            let utterance = new SpeechSynthesisUtterance("You are in range. Welcome to " + value.Name);
-            speechSynthesis.speak(utterance);
-            error = false;
-        }
-   // });
-
-    if (error) {
-        document.getElementById("error-message").innerHTML = "You are out of range from target location";
-        let utterance = new SpeechSynthesisUtterance("You are out of range from target location");
-            speechSynthesis.speak(utterance);
-    } else {
-        document.getElementById("error-message").innerHTML = "";
-    }
-}
-
-function isInside(questLat, questLon) {
-    let distance = distanceBetweenLocations(questLat, questLon);
-    console.log("distance: " + distance);
-    if (distance < 30) {
-        return true;
-    } else {
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
         return false;
+    else
+        return true;
+}
+
+function isValidDevice(device) {
+    let deviceCoordinates = {};
+    deviceCoordinates["latitude"] = device.coords.latitude;
+    deviceCoordinates["longitude"] = device.coords.longitude;
+
+    if (isValid(deviceCoordinates))
+        return true;
+    else
+        throw "Invalid Device";
+}
+
+function isValidType(location) {
+    if (location.type === "sqaure")
+        return true;
+    else
+        throw "Invalid Location Type";
+}
+
+function isValidCoordinates(coordinates) {
+    if (coordinates.length != 4)
+        return false;
+
+    coordinates.forEach(function (coordinate, index) {
+        if (!isValid(coordinate))
+            return false;
+    })
+
+    return true;
+}
+
+function isValidLocation(location) {
+    if (location.name.length > 0 && isValidType(location) && isValidCoordinates(location.coordinates))
+        return true;
+    else
+        throw "Invalid Location";
+}
+
+function isValidArguments(device, location) {
+    if(device == null && location == null)
+        throw "Two valid arguments are needed";
+    else
+        return true;
+}
+
+function isInsideSquare(device, location) {
+    try {
+        let checkValid = isValidArguments(device, location) && isValidDevice(device) && isValidType(location) && isValidLocation(location);
+        if (checkValid) {
+            let x = device.coords.latitude;
+            let y = device.coords.longitude;
+
+            let inside = false;
+            let coordinates = location.coordinates;
+            for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+                let xi = coordinates[i]["latitude"], yi = coordinates[i]["longitude"];
+                let xj = coordinates[j]["latitude"], yj = coordinates[j]["longitude"];
+
+                let intersect = ((yi > y) != (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+    } catch (err) {
+        console.log("Exception: " + err);
     }
 }
-
-function distanceBetweenLocations(questLat, questLon) {
-    const R = 6371e3;
-    const φ1 = currentlat * Math.PI / 180;
-    const φ2 = questLat * Math.PI / 180;
-    const Δφ = (questLat - currentlat) * Math.PI / 180;
-    const Δλ = (questLon - currentlon) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const d = R * c;
-    return d;
-}
-
-
-function colorFunction1() {
-    // const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", ];
-    var random = locationsArray[2].Name;
-    
-  //  let value = values[random];
-    document.getElementById("bgrone").style.backgroundColor = "#7aeb7a";
-    document.getElementById("lbl").innerHTML = random;
-    let utterance = new SpeechSynthesisUtterance(` Your target location is ${random}`);
-    speechSynthesis.speak(utterance);
-    
-}
-
-/* function colorFunction2() {
-    const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", ];
-    const random = Math.floor(Math.random() * values.length);
-    let value = values[random];
-    document.getElementById("bgrtwo").style.backgroundColor = "#99cfe0";
-    document.getElementById("lbl2").innerHTML = value;
-    let utterance = new SpeechSynthesisUtterance(`     You have picked the card of color Light Blue of the value     ${value}`);
-    speechSynthesis.speak(utterance);
-}*/
