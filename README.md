@@ -7,7 +7,7 @@ This is an app that determines whether the user is the target location or not us
 - Hosted app link : https://krishna-koyyalamudi.github.io/talk-2-treasure-6/
 
 
-###Install Jest using yarn:
+### Install Jest using yarn:
 
 ```
 yarn add --dev jest
@@ -21,7 +21,7 @@ npm install --save-dev jest
 
 Note: Jest documentation uses yarn commands, but npm will also work.
 
-###Running from command line
+### Running from command line
 
 You can run Jest directly from the CLI (if it's globally available in your PATH, e.g. by yarn global add jest or npm install jest --global) with a variety of useful options.
 
