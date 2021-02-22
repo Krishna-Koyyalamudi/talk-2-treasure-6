@@ -1,23 +1,24 @@
 export default [
      
-  {
-    Name: 'Horizon Apartments',
-    Latitude: 40.3589695,
-    Longitude: -94.8831951
-},
-{
-    Name: 'Colden Pond',
-    Latitude: 40.3500419,
-    Longitude: -94.8851095
-},
-{
-    Name: 'B. D. Owens Library',
-     Latitude: 40.3535922,
-     Longitude:-94.888208
-},
-{
-    Name: 'Valk Center',
-     Latitude: 40.352821097563805,
-     Longitude:-94.88050461598701
+  { 
+       name: Marcus Garcey Park
+       type: Sqaure
+       coordinates: [
+       {
+                latitude: 40.803944,
+                longitude: -77.946034
+            },
+            {
+                latitude: 40.802734,
+                longitude: -73.943094
+            },
+            {
+                latitude: 40.805073,
+                longitude: -73.941399
+            },
+            {
+                latitude: 40.806275,
+                longitude: -73.944328
+            }
 } 
   ];
