@@ -1,74 +1,132 @@
-// import default object with a local camelCase name
-import locationsArray from '../locations.js';
+//import data from './speech.js'
+ import locationsArray from '../location.js';
 
-const inside = (device, bounds) => {
-  // console.log(`CHECKING inside ${bounds.Name}`);
-  // console.log(device);
-  // console.log(bounds);
-  // console.log(device.latitude > bounds.South);
-  // console.log(device.latitude < bounds.North);
-  // console.log(device.longitude > bounds.West);
-  // console.log(device.longitude < bounds.East);
-  const ans =
-    device.latitude > bounds.South &&
-    device.latitude < bounds.North &&
-    device.longitude > bounds.West &&
-    device.longitude < bounds.East;
-  // console.log(`CHECKING ${bounds.Name} ANS: ${ans}`);
-  return ans;
-};
+let colorElement1 = document.getElementById("status");
+let colorElement2 = document.getElementById("status1");
+let device, location;
 
-/**
- * Get the location
- * Uses new import / export - be sure to set type="module" in HTML
- * Can be easily added to any web page.
- * Includes GeoLocation API example.
- * @module location/getLocation
- * @author Denise Case
- */
-export default function getLocation() {
-  if (!navigator.geolocation) {
-    document.querySelector('#error-message').innerHTML =
-      'Browser does not support geolocation.';
-  } else {
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0,
-    };
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        document.querySelector('#device-lat').innerHTML = '';
-        document.querySelector('#device-long').innerHTML = '';
-        document.querySelector('#locationAnswer').innerHTML = '?';
 
-        if (position === undefined) {
-          document.querySelector('#error-message').innerHTML =
-            'Browser cannot determine device position (position is undefined).';
+colorElement1.addEventListener('click', onClickSquareBox1);
+colorElement1.addEventListener('touch', onClickSquareBox1);
+colorElement2.addEventListener('click', onClickSquareBox2);
+colorElement2.addEventListener('touch', onClickSquareBox2);
+
+
+async function onClickSquareBox1() {
+    location = locationsArray[0];
+    let confirmation = "Treasure location is " + location.name;
+    document.getElementById("status").innerHTML = confirmation;
+    let utterance = new SpeechSynthesisUtterance(confirmation);
+    speechSynthesis.speak(utterance);
+}
+
+async function onClickSquareBox2() {
+    device = await getLocation();
+
+    let isInside = isInsideQuad(device, location);
+    let status;
+    let speak;
+    status = "Device Coordinates: " + "<br>";
+    status += "Latitude: " + device.coords.latitude + "<br>";
+    status += "Longitude: " + device.coords.longitude + "<br>";
+    if(isInside) {
+        status += "Congratulations!! You have reached Quest: " + location.name;
+        speak = "Congratulations!! You have reached Quest: " + location.name;
+    } else {
+        status += "OOPS!! You are out of the treasure region";
+        speak = "OOPS!! You are out of the treasure region";
+    }
+    document.getElementById("status1").innerHTML = status;
+    let utterance = new SpeechSynthesisUtterance(speak);
+    speechSynthesis.speak(utterance);
+
+}
+
+// collects current location
+async function getLocation() {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+    }).then(position => {
+        return position;
+    });
+}
+
+function isValid(coordinates) {
+    let lat = coordinates.latitude;
+    let lon = coordinates.longitude;
+
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
+        return false;
+    else
+        return true;
+}
+
+function isValidDevice(device) {
+    let deviceCoordinates = {};
+    deviceCoordinates["latitude"] = device.coords.latitude;
+    deviceCoordinates["longitude"] = device.coords.longitude;
+
+    if (isValid(deviceCoordinates))
+        return true;
+    else
+        throw "Invalid Device";
+}
+
+function isValidType(location) {
+    if (location.type === "quad")
+        return true;
+    else
+        throw "Invalid Location Type";
+}
+
+function isValidCoordinates(coordinates) {
+    if (coordinates.length != 4)
+        return false;
+
+    coordinates.forEach(function (coordinate, index) {
+        if (!isValid(coordinate))
+            return false;
+    })
+
+    return true;
+}
+
+function isValidLocation(location) {
+    if (location.name.length > 0 && isValidType(location) && isValidCoordinates(location.coordinates))
+        return true;
+    else
+        throw "Invalid Location";
+}
+
+function isValidArguments(device, location) {
+    if(device == null && location == null)
+        throw "Two valid arguments are needed";
+    else
+        return true;
+}
+
+function isInsideQuad(device, location) {
+    try {
+        let checkValid = isValidArguments(device, location) && isValidDevice(device) && isValidType(location) && isValidLocation(location);
+        if (checkValid) {
+            let x = device.coords.latitude;
+            let y = device.coords.longitude;
+
+            let inside = false;
+            let coordinates = location.coordinates;
+            for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+                let xi = coordinates[i]["latitude"], yi = coordinates[i]["longitude"];
+                let xj = coordinates[j]["latitude"], yj = coordinates[j]["longitude"];
+
+                let intersect = ((yi > y) != (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
         }
-        const device = position.coords;
-        document.querySelector('#device-lat').innerHTML = device.latitude;
-        document.querySelector('#device-long').innerHTML = device.longitude;
-        const arrayLength = locationsArray.length;
-        for (let i = 0; i < arrayLength; i += 1) {
-          const thisLoc = locationsArray[i];
-          if (inside(device, thisLoc)) {
-            const name = thisLoc.Name;
-            document.querySelector('#locationAnswer').innerHTML = name;
-            const utterance = new SpeechSynthesisUtterance();
-            utterance.text = `Congratulations! You found location ${name}`;
-            window.speechSynthesis.speak(utterance);
-            break;
-          }
-        }
-      },
-      (err) => {
-        const s = `ERROR(${err.code}): ${err.message}`;
-        console.warn(s);
-        document.querySelector('#error-message').innerHTML = err.message;
-      },
-      options,
-    );
-  }
+
+    } catch (err) {
+        console.log("Exception: " + err);
+    }
 }
